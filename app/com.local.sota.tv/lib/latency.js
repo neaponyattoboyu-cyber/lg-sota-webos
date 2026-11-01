@@ -39,7 +39,7 @@ function probe(address, port, proxy, timeout) {
     socket.connect(proxy ? proxy.port : port, proxy ? proxy.host : address);
   });
 }
-function group(l) { return l.shortname === 'BST' ? -1 : l.shortname === 'RU' ? 1 : /^BR/.test(l.shortname) || /^Мост/i.test(l.name) ? 2 : 0; }
+function group(l) { return l.shortname === 'BST' ? -1 : l.shortname === 'RU' ? 1 : /^BRRU/.test(l.shortname) || /^Мост/i.test(l.name) ? 2 : 0; }
 function sorted(list, measurements) {
   var items = list.map(function (l, i) {
     var r = measurements && measurements.byId && measurements.byId[l.id];

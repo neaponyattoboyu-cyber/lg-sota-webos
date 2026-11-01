@@ -25,7 +25,7 @@ function paint(result){
  // Update values without moving or reordering buttons while the picker is open.
  if(!picker.hidden)Array.prototype.forEach.call(list.children,function(b){var l=result.locations.filter(function(x){return x.id===Number(b.dataset.id);})[0];if(l)b.querySelector('.ping').textContent=ms(l);});
  var s=result.settings||{},u=result.updates||{};
- el('version').textContent=result.version||'1.2.0';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
+ el('version').textContent=result.version||'1.2.1';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
  el('auto-update-value').textContent=s.autoUpdate?'Вкл':'Выкл';el('auto-update').setAttribute('aria-pressed',s.autoUpdate?'true':'false');
  el('update-versions').textContent='Клиент LG: '+(u.currentVersion||result.version)+' · Последняя Sota: '+(u.upstreamVersion||'—');
  el('update-message').textContent=(u.message||'Обновления проверяются автоматически раз в сутки.')+(u.upstreamNewer?' У Sota вышла новая версия. Совместимое обновление для LG появится отдельно.':'');

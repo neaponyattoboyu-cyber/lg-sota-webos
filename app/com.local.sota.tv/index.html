@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sota VPN</title><link rel="stylesheet" href="style.css"></head>
 <body><main>
-<header><img src="icon.png" alt=""><div><h1>Sota VPN</h1><p class="subhead">Личный клиент для LG</p></div></header>
+<header><img src="bee.png" alt=""><div><h1>Sota VPN</h1><p class="subhead">Личный клиент для LG</p></div></header>
 <div class="connection"><span id="light"></span><h2 id="status" aria-live="polite">Проверяю подключение…</h2></div>
 <p id="active">Загрузка…</p><label class="field-label" for="country">Страна подключения</label>
 <button id="country" class="country" type="button" aria-haspopup="dialog"><img id="country-flag" class="flag" src="flags/globe.svg" alt=""><span id="country-name">Загрузка стран…</span><span id="country-ping" class="ping"></span><span class="chevron">⌄</span></button>
 <div class="actions"><button id="toggle" class="primary" type="button">Подключить</button><button id="reconnect" class="secondary" type="button">Переподключить</button></div>
 <p id="message" aria-live="polite"></p>
 <div class="toolbar"><button id="refresh" class="text-button" type="button">Обновить страны и пинг</button><button id="settings" class="text-button" type="button">Настройки и обновления</button></div>
-<p class="hint">Можно закрыть приложение — VPN продолжит работать.</p><footer>Клиент LG <span id="version">1.2.0</span></footer>
+<p class="hint">Можно закрыть приложение — VPN продолжит работать.</p><footer>Клиент LG <span id="version">1.2.1</span></footer>
 </main>
 <div id="picker" class="overlay" role="dialog" aria-modal="true" aria-labelledby="picker-title" hidden><section class="picker-card"><div class="picker-header"><h2 id="picker-title">Выберите страну</h2><button id="picker-close" type="button">Закрыть</button></div><p id="latency-status" class="list-note">По отклику · Россия и мосты в конце</p><div id="country-list"></div><p class="picker-hint">Стрелки — выбор · OK — сохранить · Назад — закрыть</p></section></div>
 <div id="settings-panel" class="overlay" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden><section class="settings-card"><div class="picker-header"><h2 id="settings-title">Настройки и обновления</h2><button id="settings-close" type="button">Закрыть</button></div><div class="settings-scroll">

@@ -39,4 +39,4 @@ A full power-off stops all TV processes; the VPN starts again once the TV and ne
 
 ## Components and licenses
 
-Application code and the custom shield/star icons: MIT. The unmodified sing-box 1.13.21 engine is GPLv3; its license and upstream source links are in `app/com.local.sota.tv/licenses`. Each release also provides the matching upstream source archive. National-flag artwork is cached from the public Sota CDN for country identification; the original URLs are recorded in `flags/SOURCES.json`. National symbols retain any applicable usage restrictions. No official Sota bee logo is distributed.
+Application code: MIT. Sota logo/branding belong to Sota and identify service compatibility. The unmodified sing-box 1.13.21 engine is GPLv3; its license and upstream source links are in `app/com.local.sota.tv/licenses`. Each release also provides the matching upstream source archive. National-flag artwork is cached from the public Sota CDN for country identification; the original URLs are recorded in `flags/SOURCES.json`. National symbols retain any applicable usage restrictions. This unofficial client is not endorsed by Sota.

@@ -57,11 +57,13 @@ Updater.prototype.install = async function (progress) {
   if (progress) progress('Устанавливаю обновление приложения…');
   var runner = path.join(this.store.dir, 'updates/install-runner.sh');
   fs.writeFileSync(runner, fs.readFileSync(path.join(this.app, 'update-install.sh')), {mode: 448});
+  var self = this;
   return new Promise(function (resolve, reject) {
     require('child_process').execFile('/bin/sh', [runner], {timeout: 200000, maxBuffer: 8192}, function (error, stdout) {
       var result;
       try { result = JSON.parse(stdout.trim().split(/\r?\n/).pop()); } catch (_) {}
       if (error || !result || !result.ok) return reject(new UserError(result && result.message || 'Не удалось установить обновление. Прежняя версия сохранена.'));
+      try { var state = self.store.get('updates/status', {}); state.message = 'Установлена актуальная версия.'; self.store.set('updates/status', state); } catch (_) {}
       resolve('Приложение обновлено. Откройте его ещё раз.');
     });
   });

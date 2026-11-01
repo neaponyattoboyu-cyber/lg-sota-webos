@@ -1,0 +1,6 @@
+app/com.local.sota.tv/bin/sing-box
+node_modules/
+dist/
+private/
+*.key
+*-signing.pem

@@ -1,0 +1,13 @@
+{
+  "id": "com.local.sota.tv",
+  "version": "1.2.0",
+  "vendor": "Personal setup",
+  "type": "web",
+  "main": "index.html",
+  "title": "Sota VPN",
+  "icon": "icon.png",
+  "largeIcon": "icon.png",
+  "bgColor": "#101419",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true
+}

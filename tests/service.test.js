@@ -81,6 +81,26 @@ async function run() {
     var built = profile.build(input); assert.strictEqual(built.outbounds[0].tls.insecure, undefined); assert.strictEqual(built.route.final, 'sota');
     assert.strictEqual(built.inbounds[0].address.length, 1); assert.strictEqual(built.dns.servers[1].detour, undefined);
   });
+  await test('Kinopoisk bypass keeps YouTube on the VPN and validates before touching a live connection', async function () {
+    var t=setup();await t.service.configureSplit('toggle-kinopoisk');
+    var c=t.engine.readConfig();assert(c.dns.reverse_mapping);assert.strictEqual(c.route.final,'sota');
+    var rule=c.route.rules[c.route.rules.length-1];assert.strictEqual(rule.outbound,'direct');assert(rule.domain_suffix.indexOf('kinopoisk.ru')>=0);
+    assert(!JSON.stringify(rule).match(/youtube|googlevideo|ytimg/));assert(t.values.split.enabled&&t.values.split.kinopoisk);
+    assert(t.events[0].indexOf('validate:')===0);assert(t.events.indexOf('stop')>0);
+    await t.service.configureSplit('toggle-split');assert(!t.engine.readConfig().dns.reverse_mapping);assert.strictEqual(t.values.split.kinopoisk,true);
+  });
+  await test('split changes roll back after a failed start and report restoration honestly', async function () {
+    var t=setup(),old=JSON.stringify(t.engine.readConfig());
+    t.engine.start=async function(){return {running:!t.engine.readConfig().dns.reverse_mapping};};
+    await rejects(function(){return t.service.configureSplit('toggle-kinopoisk');},/Прежние настройки восстановлены/);
+    assert.strictEqual(JSON.stringify(t.engine.readConfig()),old);assert(!t.values.split.enabled);
+    t=setup();t.engine.start=async function(){return {running:false};};
+    await rejects(function(){return t.service.configureSplit('toggle-kinopoisk');},/VPN не удалось запустить/);
+  });
+  await test('a stopped VPN stays stopped when split rules are configured, and validation failures leave it untouched', async function () {
+    var t=setup();t.engine.status=async function(){return {running:false};};await t.service.configureSplit('toggle-kinopoisk');assert.strictEqual(t.starts.length,0);
+    t=setup();t.engine.validate=async function(){throw Error('invalid rules');};await rejects(function(){return t.service.configureSplit('toggle-kinopoisk');},/invalid rules/);assert.strictEqual(t.events.length,0);
+  });
   console.log(count + ' failure-path and behavior tests passed.');
 }
 run().catch(function (e) { console.error(e.stack); process.exitCode = 1; });

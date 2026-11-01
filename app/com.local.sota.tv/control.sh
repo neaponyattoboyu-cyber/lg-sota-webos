@@ -84,7 +84,7 @@ case "${1:-status}" in
         while running && [ "${client_pid}" = "${2:-}" ]; do
             if [ ! -f "${APPDIR}/appinfo.json" ]; then stop_owned; exit 0; fi
             if [ -f "${LOG}" ] && [ "$(wc -c <"${LOG}")" -gt 262144 ]; then : >"${LOG}"; fi
-            sleep 3
+            sleep 30
         done
         ;;
     *) reply false 'Неизвестная команда.'; exit 1 ;;

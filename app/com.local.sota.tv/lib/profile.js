@@ -23,8 +23,8 @@ function outbound(response) {
   if (tls.utls && tls.utls.enabled) result.tls.utls = {enabled: true, fingerprint: text(tls.utls.fingerprint, 40, /^[a-zA-Z0-9_]+$/)};
   return result;
 }
-function build(response) {
-  return {log: {level: 'warn'}, dns: {servers: [
+function build(response, splitSettings) {
+  var config = {log: {level: 'warn'}, dns: {servers: [
     {type: 'https', tag: 'remote-dns', server: '1.1.1.1', path: '/dns-query', detour: 'sota'},
     {type: 'udp', tag: 'bootstrap-dns', server: '1.1.1.1'}], final: 'remote-dns', strategy: 'prefer_ipv4'},
     inbounds: [{type: 'tun', tag: 'tv-tun', interface_name: 'sotavpn0', address: ['172.28.0.1/30'], mtu: 1400,
@@ -34,6 +34,7 @@ function build(response) {
     route: {auto_detect_interface: true, default_domain_resolver: 'bootstrap-dns', rules: [
       {inbound: ['latency-in'], action: 'route', outbound: 'direct'},
       {action: 'sniff'}, {protocol: 'dns', action: 'hijack-dns'}, {ip_is_private: true, action: 'route', outbound: 'direct'}], final: 'sota'}};
+  return require('./split').apply(config,splitSettings);
 }
 function fingerprint(config) { return crypto.createHash('sha256').update(JSON.stringify(config)).digest('hex'); }
 function locations(input) {

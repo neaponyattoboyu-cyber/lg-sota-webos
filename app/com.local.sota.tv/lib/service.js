@@ -1,6 +1,7 @@
 'use strict';
 var UserError = require('./error');
 var profile = require('./profile');
+var split = require('./split');
 function same(a, b) { return a && b && a.id === b.id && a.name === b.name && a.shortname === b.shortname; }
 function Service(store, provider, engine, progress) {
   this.store = store; this.provider = provider; this.engine = engine; this.progress = progress || function () {};
@@ -43,7 +44,7 @@ Service.prototype.connect = async function () {
   this.store.set('prefs', {selected: location});
   var candidates = [], seen = {}, lastError;
   async function add(response) {
-    var config = profile.build(response), hash = profile.fingerprint(config);
+    var config = profile.build(response,split.get(self.store)), hash = profile.fingerprint(config);
     if (!seen[hash]) { await self.engine.validate(config); candidates.push({config: config, fresh: true}); seen[hash] = true; }
   }
   // Collect and validate complete profiles while the previous VPN still works.
@@ -54,8 +55,9 @@ Service.prototype.connect = async function () {
   }
   var cache = this.store.get('profiles/' + chosen.id, null);
   if (!candidates.length && cache && same(cache.location, location)) {
-    await this.engine.validate(cache.config);
-    candidates.push({config: cache.config, fresh: false}); offline = true;
+    var cachedConfig=profile.build({platform:'singbox',configuration:{outbounds:cache.config.outbounds}},split.get(this.store));
+    await this.engine.validate(cachedConfig);
+    candidates.push({config: cachedConfig, fresh: false}); offline = true;
   }
   if (!candidates.length) throw lastError || new UserError('Sota пока не отвечает. Прежнее подключение сохранено.');
 
@@ -102,3 +104,29 @@ Service.prototype.connect = async function () {
   throw switchError || new UserError('Серверы не ответили. VPN выключен. Попробуйте другую страну.');
 };
 module.exports = Service;
+Service.prototype.configureSplit = async function(action){
+ var previous=split.get(this.store),selected=split.next(previous,action),old=this.engine.readConfig();
+ if(!old)throw new UserError('Сначала подключите VPN, чтобы сохранить настройки сервера.');
+ var config=profile.build({platform:'singbox',configuration:{outbounds:old.outbounds}},selected);
+ await this.engine.validate(config);
+ if(profile.fingerprint(config)===profile.fingerprint(old)){this.store.set('split',selected);return '';}
+ var wasRunning=(await this.engine.status()).running,touched=false;
+ this.progress('Применяю правила сплит-туннеля…');
+ try{
+  if(wasRunning){var stopped=await this.engine.stop();if(stopped.running)throw new UserError('Не удалось применить правила. Прежнее подключение сохранено.');}
+  touched=true;this.engine.writeConfig(config);
+  if(wasRunning){var started=await this.engine.start();if(!started.running||started.message)throw new UserError('Новое подключение не прошло проверку.');}
+  this.store.set('split',selected);return selected.enabled&&selected.kinopoisk?'Кинопоиск идёт напрямую. YouTube остаётся через VPN.':'Выбранные исключения выключены.';
+ }catch(e){
+  if(!touched)throw e;
+  this.store.set('split',previous);
+  var finalStop=await this.engine.stop();
+  if(finalStop.running)throw new UserError('Не удалось завершить смену правил. Попробуйте выключить VPN.');
+  this.engine.writeConfig(old);
+  if(wasRunning){
+   var restored;try{restored=await this.engine.start();}catch(_){restored={running:false};}
+   if(!restored.running||restored.message){await this.engine.stop();throw new UserError('Прежние правила сохранены. VPN не удалось запустить; попробуйте подключиться снова.');}
+  }
+  throw new UserError('Правила не удалось применить. Прежние настройки восстановлены.');
+ }
+};

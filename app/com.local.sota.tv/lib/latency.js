@@ -40,10 +40,12 @@ function probe(address, port, proxy, timeout) {
   });
 }
 function group(l) { return l.shortname === 'BST' ? -1 : l.shortname === 'RU' ? 1 : /^BRRU/.test(l.shortname) || /^Мост/i.test(l.name) ? 2 : 0; }
-function sorted(list, measurements) {
+function sorted(list, measurements, connected) {
   var items = list.map(function (l, i) {
     var r = measurements && measurements.byId && measurements.byId[l.id];
-    return Object.assign({}, l, {latencyMs: r && typeof r.ms === 'number' ? r.ms : null, originalIndex: i});
+    var ms=r&&typeof r.ms==='number'?r.ms:null;
+    if(connected&&connected.id===l.id&&typeof connected.ms==='number')ms=ms===null?connected.ms:Math.min(ms,connected.ms);
+    return Object.assign({}, l, {latencyMs: ms, originalIndex: i});
   });
   items.sort(function (a, b) { return group(a) - group(b) ||
     (a.latencyMs === null ? Infinity : a.latencyMs) - (b.latencyMs === null ? Infinity : b.latencyMs) || a.originalIndex - b.originalIndex; });

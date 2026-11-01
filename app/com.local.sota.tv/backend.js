@@ -11,7 +11,8 @@ async function status(){
  jobs.recover();measurements.recover();
  var job=jobs.read(),state=await engine.status(),cached=store.get('locations',{items:[]}),prefs=store.get('prefs',{}),active=store.get('active',null),metrics=store.get('latency',{});
  if(metrics.schemaVersion!==2)metrics={byId:{}};
- var sorted=latency.sorted(cached.items,metrics),selected=profile.resolve(sorted,prefs.selected),activeMetric=metrics.active&&metrics.active.digest===latency.digest(engine.readConfig())?metrics.active:null;
+ var activeMetric=metrics.active&&metrics.active.digest===latency.digest(engine.readConfig())?metrics.active:null;
+ var sorted=latency.sorted(cached.items,metrics,activeMetric&&active?{id:active.id,ms:activeMetric.ms}:null),selected=profile.resolve(sorted,prefs.selected);
  function visible(l){if(!l)return null;var fresh=sorted.filter(function(x){return x.id===l.id;})[0]||l;var out=profile.identity(fresh);out.flag=flag(fresh);out.latencyMs=typeof fresh.latencyMs==='number'?fresh.latencyMs:null;return out;}
  var shownActive=visible(active);if(shownActive){shownActive.bestLatencyMs=shownActive.latencyMs;shownActive.latencyMs=activeMetric?activeMetric.ms:null;}
  return {running:state.running,busy:jobs.busy(),message:job.message||state.message||'',active:shownActive,selected:visible(selected||prefs.selected),

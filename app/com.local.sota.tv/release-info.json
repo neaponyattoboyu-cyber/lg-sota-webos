@@ -1,1 +1,5 @@
-{"version":"1.2.1","upstreamBaseVersion":"1.8.11","updateFeed":"https://github.com/neaponyattoboyu-cyber/lg-sota-webos/releases/latest/download/latest.json"}
+{
+  "version": "1.2.2",
+  "upstreamBaseVersion": "1.8.11",
+  "updateFeed": "https://github.com/neaponyattoboyu-cyber/lg-sota-webos/releases/latest/download/latest.json"
+}

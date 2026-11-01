@@ -5,7 +5,8 @@ var pending=false,state=null,bridge,serial=0,refreshed=false,measured=false,last
 var toggle=el('toggle'),country=el('country'),reconnect=el('reconnect'),refresh=el('refresh'),settingsButton=el('settings');
 var picker=el('picker'),panel=el('settings-panel'),list=el('country-list'),appPath='/media/developer/apps/usr/palm/applications/com.local.sota.tv';
 function different(a,b){return a&&b&&(a.id!==b.id||a.name!==b.name);}
-function ms(l){return l&&typeof l.latencyMs==='number'?l.latencyMs+' мс':'—';}
+function ms(l){return l&&typeof l.latencyMs==='number'?l.latencyMs+' мс':'нет данных';}
+function paintPing(target,l){var value=l&&l.latencyMs;target.textContent='';var dot=document.createElement('span');dot.className='ping-dot '+(typeof value!=='number'?'ping-unknown':value<=50?'ping-good':value<=80?'ping-fair':'ping-poor');dot.setAttribute('aria-hidden','true');target.appendChild(dot);var label=document.createElement('span');label.textContent=ms(l);target.appendChild(label);}
 function flagName(l){return l&&/^[a-z0-9-]+\.svg$/.test(l.flag||'')?l.flag:'globe.svg';}
 function image(l){var img=document.createElement('img');img.className='flag';img.alt='';img.src='flags/'+flagName(l);img.onerror=function(){this.onerror=null;this.src='flags/globe.svg';};return img;}
 function controls(){return [country,toggle,reconnect,refresh,settingsButton].filter(function(b){return !b.disabled&&!b.hidden;});}
@@ -18,14 +19,14 @@ function paint(result){
  document.body.className=result.running?'connected':'';
  el('status').textContent=result.busy?'Подождите…':result.running?'VPN включён':'VPN выключен';
  el('active').textContent=result.running?'Подключено: '+(result.active?result.active.name:'Sota'):'Выберите страну и подключитесь';
- el('country-name').textContent=result.selected?result.selected.name:'Выбрать страну';el('country-flag').src='flags/'+flagName(result.selected);el('country-ping').textContent=ms(result.selected);
+ el('country-name').textContent=result.selected?result.selected.name:'Выбрать страну';el('country-flag').src='flags/'+flagName(result.selected);paintPing(el('country-ping'),result.selected);
  toggle.textContent=result.running?(different(result.selected,result.active)?'Сменить страну':'Отключить'):'Подключить';el('message').textContent=result.message||'';
  country.disabled=result.busy||!result.locations.length;toggle.disabled=result.busy||!result.selected;reconnect.hidden=!result.running||different(result.selected,result.active);reconnect.disabled=result.busy;refresh.disabled=result.busy;
  el('latency-status').textContent=result.measuring?'Измеряю отклик… Россия и мосты останутся в конце.':'По отклику · Россия и мосты в конце';
  // Update values without moving or reordering buttons while the picker is open.
- if(!picker.hidden)Array.prototype.forEach.call(list.children,function(b){var l=result.locations.filter(function(x){return x.id===Number(b.dataset.id);})[0];if(l)b.querySelector('.ping').textContent=ms(l);});
+ if(!picker.hidden)Array.prototype.forEach.call(list.children,function(b){var l=result.locations.filter(function(x){return x.id===Number(b.dataset.id);})[0];if(l)paintPing(b.querySelector('.ping'),l);});
  var s=result.settings||{},u=result.updates||{};
- el('version').textContent=result.version||'1.2.1';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
+ el('version').textContent=result.version||'1.2.2';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
  el('auto-update-value').textContent=s.autoUpdate?'Вкл':'Выкл';el('auto-update').setAttribute('aria-pressed',s.autoUpdate?'true':'false');
  el('update-versions').textContent='Клиент LG: '+(u.currentVersion||result.version)+' · Последняя Sota: '+(u.upstreamVersion||'—');
  el('update-message').textContent=(u.message||'Обновления проверяются автоматически раз в сутки.')+(u.upstreamNewer?' У Sota вышла новая версия. Совместимое обновление для LG появится отдельно.':'');
@@ -46,7 +47,7 @@ function request(action,id){
 }
 country.addEventListener('click',function(){
  if(!state||state.busy||pending)return;list.textContent='';
- state.locations.forEach(function(location){var b=document.createElement('button');b.type='button';b.dataset.id=location.id;b.appendChild(image(location));var name=document.createElement('span');name.className='country-label';name.textContent=location.name;b.appendChild(name);var ping=document.createElement('span');ping.className='ping';ping.textContent=ms(location);b.appendChild(ping);b.setAttribute('aria-pressed',state.selected&&state.selected.id===location.id?'true':'false');b.addEventListener('click',function(){closePicker();lastAction='country';request('choose',location.id);});list.appendChild(b);});
+ state.locations.forEach(function(location){var b=document.createElement('button');b.type='button';b.dataset.id=location.id;b.appendChild(image(location));var name=document.createElement('span');name.className='country-label';name.textContent=location.name;b.appendChild(name);var ping=document.createElement('span');ping.className='ping';paintPing(ping,location);b.appendChild(ping);b.setAttribute('aria-pressed',state.selected&&state.selected.id===location.id?'true':'false');b.addEventListener('click',function(){closePicker();lastAction='country';request('choose',location.id);});list.appendChild(b);});
  picker.hidden=false;var target=list.querySelector('[aria-pressed=true]')||list.firstElementChild;if(target){target.focus();target.scrollIntoView({block:'nearest'});}
 });
 el('picker-close').addEventListener('click',closePicker);settingsButton.addEventListener('click',showSettings);el('settings-close').addEventListener('click',closePanel);

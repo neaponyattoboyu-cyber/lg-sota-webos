@@ -9,5 +9,10 @@ var monitor=new Supervisor({now:Date.now,settings:function(){return settings.get
  busy:function(){jobs.recover();return jobs.busy();},ready:function(){return !!updater.state().available;},enqueue:function(action){return jobs.enqueue(action,null);},
  status:function(){return engine.status();},hasConfig:function(){return !!engine.readConfig();},startCached:function(){return engine.start();},healthy:function(){return engine.healthy();},
  networkReady:function(){return command('/bin/sh',['-c','ip route show default | grep -q default']);}});
-async function main(){while(fs.existsSync(path.join(__dirname,'appinfo.json'))){if(storage.read(path.join(__dirname,'release-info.json'),{}).version!==updater.info.version){process.exitCode=73;return;}try{await monitor.tick();}catch(_){}await new Promise(function(resolve){setTimeout(resolve,10000);});}}
+async function main(){while(true){
+ if(await monitor.d.updating()){await new Promise(function(resolve){setTimeout(resolve,1000);});continue;}
+ if(!fs.existsSync(path.join(__dirname,'appinfo.json')))return;
+ if(storage.read(path.join(__dirname,'release-info.json'),{}).version!==updater.info.version){process.exitCode=73;return;}
+ try{await monitor.tick();}catch(_){}await new Promise(function(resolve){setTimeout(resolve,10000);});
+}}
 main().catch(function(){process.exitCode=1;});

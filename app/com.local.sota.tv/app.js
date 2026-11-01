@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 function el(id){return document.getElementById(id);}
-var pending=false,state=null,bridge,serial=0,refreshed=false,measured=false,lastAction='toggle',pollTimer=null;
+var pending=false,state=null,bridge,serial=0,refreshed=false,measured=false,lastAction='toggle',pollTimer=null,queued=null,inFlightAction=null;
 var toggle=el('toggle'),country=el('country'),reconnect=el('reconnect'),refresh=el('refresh'),settingsButton=el('settings');
 var picker=el('picker'),panel=el('settings-panel'),splitPanel=el('split-panel'),list=el('country-list'),appPath='/media/developer/apps/usr/palm/applications/com.local.sota.tv';
 function different(a,b){return a&&b&&(a.id!==b.id||a.name!==b.name);}
@@ -16,20 +16,21 @@ function closePicker(){picker.hidden=true;country.focus();}
 function showSplit(){splitPanel.hidden=false;el('split-enabled').focus();}
 function closeSplit(){splitPanel.hidden=true;el('split-open').focus();}
 function platformBack(){if(window.webOS&&typeof window.webOS.platformBack==='function')window.webOS.platformBack();else if(window.PalmSystem&&typeof window.PalmSystem.platformBack==='function')window.PalmSystem.platformBack();}
+function isCommand(action){return ['status','measure','measure-active'].indexOf(action)<0;}
 function paint(result){
  if(result.error){el('message').textContent=result.message;return;}
- var wasBusy=state&&state.busy;state=result;
+ var wasBusy=state&&state.busy;state=result;var waiting=queued||(pending&&isCommand(inFlightAction)),uiBusy=result.busy||!!waiting;
  document.body.className=result.running?'connected':'';
- el('status').textContent=result.busy?'Подождите…':result.running?'VPN включён':'VPN выключен';
+ el('status').textContent=uiBusy?'Подождите…':result.running?'VPN включён':'VPN выключен';
  el('active').textContent=result.running?'Подключено: '+(result.active?result.active.name:'Sota'):'Выберите страну и подключитесь';
  el('country-name').textContent=result.selected?result.selected.name:'Выбрать страну';el('country-flag').src='flags/'+flagName(result.selected);var connectedSelection=result.running&&result.active&&result.selected&&result.active.id===result.selected.id;paintPing(el('country-ping'),connectedSelection?result.active:result.selected);el('ping-note').textContent=connectedSelection?'Отклик подключённого сервера':'Лучший отклик проверенных серверов страны';
- toggle.textContent=result.running?(different(result.selected,result.active)?'Сменить страну':'Отключить'):'Подключить';el('message').textContent=result.message||'';
- country.disabled=result.busy||!result.locations.length;toggle.disabled=result.busy||!result.selected;reconnect.hidden=!result.running||different(result.selected,result.active);reconnect.disabled=result.busy;refresh.disabled=result.busy;
+ toggle.textContent=result.running?(different(result.selected,result.active)?'Сменить страну':'Отключить'):'Подключить';el('message').textContent=waiting?'Применяю выбранные настройки…':result.message||'';
+ country.disabled=uiBusy||!result.locations.length;toggle.disabled=uiBusy||!result.selected;reconnect.hidden=!result.running||different(result.selected,result.active);reconnect.disabled=uiBusy;refresh.disabled=uiBusy;
  el('latency-status').textContent=result.measuring?'Измеряю отклик… Россия и мосты останутся в конце.':'Лучший проверенный отклик страны · Россия и мосты в конце';
  // Update values without moving or reordering buttons while the picker is open.
  if(!picker.hidden)Array.prototype.forEach.call(list.children,function(b){var l=result.locations.filter(function(x){return x.id===Number(b.dataset.id);})[0];if(l)paintPing(b.querySelector('.ping'),l);});
  var s=result.settings||{},u=result.updates||{};
- el('version').textContent=result.version||'1.3.1';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
+ el('version').textContent=result.version||'1.3.2';el('autostart-value').textContent=s.autostart?'Вкл':'Выкл';el('autostart').setAttribute('aria-pressed',s.autostart?'true':'false');
  el('auto-update-value').textContent=s.autoUpdate?'Вкл':'Выкл';el('auto-update').setAttribute('aria-pressed',s.autoUpdate?'true':'false');
  el('update-versions').textContent='Клиент LG: '+(u.currentVersion||result.version)+' · Последняя Sota: '+(u.upstreamVersion||'—');
  el('update-message').textContent=(u.message||'Обновления проверяются автоматически раз в сутки.')+(u.upstreamNewer?' У Sota вышла новая версия. Совместимое обновление для LG появится отдельно.':'');
@@ -39,25 +40,26 @@ function paint(result){
  el('split-enabled-value').textContent=split.enabled?'Вкл':'Выкл';el('split-enabled').setAttribute('aria-pressed',split.enabled?'true':'false');
  el('kinopoisk-value').textContent=split.kinopoisk?'Напрямую':'Через VPN';el('kinopoisk').setAttribute('aria-pressed',split.kinopoisk?'true':'false');
  el('split-message').textContent=result.message||'';
- ['autostart','auto-update','check-update','install-update','split-enabled','kinopoisk'].forEach(function(id){el(id).disabled=result.busy;});
+ ['autostart','auto-update','check-update','install-update','split-enabled','kinopoisk'].forEach(function(id){el(id).disabled=uiBusy;});
  if(picker.hidden&&panel.hidden&&splitPanel.hidden&&(document.activeElement===document.body||(wasBusy&&!result.busy))){var target=el(lastAction);if(!target||target.disabled||target.hidden)target=toggle.disabled?settingsButton:toggle;target.focus();}
- if(!result.busy&&!result.measuring&&result.running&&(!result.activeLatencyUpdatedAt||Date.now()-result.activeLatencyUpdatedAt>120000))setTimeout(function(){request('measure-active');},150);
- if(!refreshed&&!result.busy&&(!result.updatedAt||Date.now()-result.updatedAt>21600000)){refreshed=true;setTimeout(function(){request('refresh');},100);}
+ if(!uiBusy&&!result.measuring&&result.running&&(!result.activeLatencyUpdatedAt||Date.now()-result.activeLatencyUpdatedAt>120000))setTimeout(function(){request('measure-active');},150);
+ if(!refreshed&&!uiBusy&&(!result.updatedAt||Date.now()-result.updatedAt>21600000)){refreshed=true;setTimeout(function(){if(!pending&&!queued&&!(state&&state.busy))request('refresh');else refreshed=false;},100);}
 
 }
-function schedulePoll(){clearTimeout(pollTimer);if(!document.hidden)pollTimer=setTimeout(function(){request('status');},state&&(state.busy||state.measuring)?2000:8000);}
+function schedulePoll(){clearTimeout(pollTimer);if(!document.hidden||queued)pollTimer=setTimeout(function(){request('status');},queued||state&&(state.busy||state.measuring)?2000:8000);}
 function request(action,id){
+ if((action==='choose'||action==='select')&&!/^\d{1,10}$/.test(String(id)))return;
+ if(isCommand(action)&&(pending||state&&state.busy)){queued={action:action,id:id};if(state)paint(state);if(!pending)schedulePoll();return;}
  if(pending||(state&&state.busy&&action!=='status'&&action!=='measure'))return;
  var Bridge=window.webOSServiceBridge||window.PalmServiceBridge;if(!Bridge){el('message').textContent='Откройте приложение на телевизоре LG.';return;}
- if(action==='choose'&&!/^\d{1,10}$/.test(String(id)))return;
- clearTimeout(pollTimer);pending=true;var ticket=++serial;bridge=new Bridge();
- var timer=setTimeout(function(){if(serial!==ticket)return;serial++;pending=false;el('message').textContent='Ответ задерживается. Состояние проверится автоматически.';schedulePoll();},10000);
- bridge.onservicecallback=function(raw){if(serial!==ticket)return;clearTimeout(timer);pending=false;try{var response=typeof raw==='string'?JSON.parse(raw):raw;if(!response.returnValue)throw new Error('service');var lines=(response.stdoutString||'').trim().split(/\r?\n/);paint(JSON.parse(lines[lines.length-1]));}catch(_){el('message').textContent='Не удалось обратиться к службе VPN. Откройте приложение ещё раз.';}schedulePoll();};
- bridge.call('luna://org.webosbrew.hbchannel.service/exec',JSON.stringify({command:'/bin/sh '+appPath+'/launch.sh '+action+(action==='choose'?' '+Number(id):'')}));
+ clearTimeout(pollTimer);pending=true;inFlightAction=action;var ticket=++serial;bridge=new Bridge();if(isCommand(action)&&state)paint(state);
+ var timer=setTimeout(function(){if(serial!==ticket)return;serial++;pending=false;inFlightAction=null;el('message').textContent='Ответ задерживается. Состояние проверится автоматически.';schedulePoll();},10000);
+ bridge.onservicecallback=function(raw){if(serial!==ticket)return;clearTimeout(timer);pending=false;inFlightAction=null;var received=false;try{var response=typeof raw==='string'?JSON.parse(raw):raw;if(!response.returnValue)throw new Error('service');var lines=(response.stdoutString||'').trim().split(/\r?\n/),result=JSON.parse(lines[lines.length-1]);if(isCommand(action)&&result.accepted===false&&!queued)queued={action:action,id:id};paint(result);received=!result.error;}catch(_){el('message').textContent='Не удалось обратиться к службе VPN. Откройте приложение ещё раз.';}if(received&&queued&&!state.busy){var next=queued;queued=null;request(next.action,next.id);}else schedulePoll();};
+ bridge.call('luna://org.webosbrew.hbchannel.service/exec',JSON.stringify({command:'/bin/sh '+appPath+'/launch.sh '+action+((action==='choose'||action==='select')?' '+Number(id):'')}));
 }
 country.addEventListener('click',function(){
- if(!state||state.busy||pending)return;list.textContent='';
- state.locations.forEach(function(location){var b=document.createElement('button');b.type='button';b.dataset.id=location.id;b.appendChild(image(location));var name=document.createElement('span');name.className='country-label';name.textContent=location.name;b.appendChild(name);var ping=document.createElement('span');ping.className='ping';paintPing(ping,location);b.appendChild(ping);b.setAttribute('aria-pressed',state.selected&&state.selected.id===location.id?'true':'false');b.addEventListener('click',function(){closePicker();lastAction='country';request('choose',location.id);});list.appendChild(b);});
+ if(!state||state.busy||queued||pending&&isCommand(inFlightAction))return;list.textContent='';
+ state.locations.forEach(function(location){var b=document.createElement('button');b.type='button';b.dataset.id=location.id;b.appendChild(image(location));var name=document.createElement('span');name.className='country-label';name.textContent=location.name;b.appendChild(name);var ping=document.createElement('span');ping.className='ping';paintPing(ping,location);b.appendChild(ping);b.setAttribute('aria-pressed',state.selected&&state.selected.id===location.id?'true':'false');b.addEventListener('click',function(){closePicker();lastAction='country';request('select',location.id);});list.appendChild(b);});
  picker.hidden=false;var target=list.querySelector('[aria-pressed=true]')||list.firstElementChild;if(target){target.focus();target.scrollIntoView({block:'nearest'});}if(!state.measuring&&(!state.latencyUpdatedAt||Date.now()-state.latencyUpdatedAt>1800000)){measured=true;request('measure');}
 });
 el('picker-close').addEventListener('click',closePicker);settingsButton.addEventListener('click',showSettings);el('settings-close').addEventListener('click',closePanel);

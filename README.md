@@ -4,7 +4,7 @@ Personal, unofficial webOS client for an existing Sota VPN subscription. This pr
 
 ## Features
 
-- Large Russian interface and locally cached country flags.
+- Large Russian interface and locally cached country flags. Selecting a country switches a running VPN immediately; with VPN off it only saves the choice. User commands wait for in-flight background checks and busy workers, so clicks are not silently dropped.
 - Countries ordered by measured TCP latency from the TV; Russia and bridges stay at the bottom. Automatic selection is pinned first.
 - Measurements use a loopback-only SOCKS listener routed DIRECT, avoiding an extra hop through the currently selected VPN. Up to two gateways per country, median of three samples each, concurrency limited to three. The main screen shows the actual connected endpoint; the country list includes the connected endpoint and shows the best measured gateway in each country. This measures TCP response time on port 443, not ICMP or download speed.
 - Kinopoisk service-domain bypass with rollback. Shared Yandex video-CDN addresses also go direct; this is service-based routing, not exact per-process isolation on webOS. YouTube retains the VPN route.

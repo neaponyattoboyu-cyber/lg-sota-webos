@@ -101,6 +101,16 @@ async function run() {
     var t=setup();t.engine.status=async function(){return {running:false};};await t.service.configureSplit('toggle-kinopoisk');assert.strictEqual(t.starts.length,0);
     t=setup();t.engine.validate=async function(){throw Error('invalid rules');};await rejects(function(){return t.service.configureSplit('toggle-kinopoisk');},/invalid rules/);assert.strictEqual(t.events.length,0);
   });
+  await test('selecting a country switches a running VPN with the existing rollback checks', async function () {
+    var t=setup();t.engine.start=async function(){return {running:true};};await t.service.select(10);
+    assert.strictEqual(t.values.active.id,10);assert.strictEqual(t.values.prefs.selected.id,10);assert.strictEqual(t.engine.readConfig().outbounds[0].server,'new.example.com');
+    assert(t.events.indexOf('stop')>t.events.indexOf('validate:new.example.com'));
+    t=setup();await rejects(function(){return t.service.select(10);},/Прежнее подключение восстановлено/);assert.strictEqual(t.values.active.id,12);
+  });
+  await test('selecting while disconnected saves the country without connecting or calling the provider', async function () {
+    var t=setup();t.engine.status=async function(){return {running:false};};t.provider.locations=async function(){throw Error('Provider must not be called');};await t.service.select(10);
+    assert.strictEqual(t.values.prefs.selected.id,10);assert.deepStrictEqual(t.events,[]);
+  });
   console.log(count + ' failure-path and behavior tests passed.');
 }
 run().catch(function (e) { console.error(e.stack); process.exitCode = 1; });

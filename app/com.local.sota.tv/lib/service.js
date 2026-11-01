@@ -21,6 +21,11 @@ Service.prototype.choose = function (id) {
   this.store.set('prefs', {selected: profile.identity(location)});
   return '';
 };
+Service.prototype.select = async function (id) {
+  this.choose(id);
+  if (!(await this.engine.status()).running) return '';
+  return this.connect();
+};
 Service.prototype.stop = async function () {
   this.progress('Отключаю VPN…');
   var r = await this.engine.stop();

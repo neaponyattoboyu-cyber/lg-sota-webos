@@ -26,8 +26,9 @@ async function execute(job,progress){
  if(job.action==='check-update')return updater.check(progress);
  if(job.action==='install')return updater.install(progress);
  if(job.action==='stop'){session.set('intent',{manualOff:true});return new Service(store,null,engine,progress).stop();}
- if(['connect','refresh','resume'].indexOf(job.action)<0)throw new Error('Invalid action');
+ if(['connect','select','refresh','resume'].indexOf(job.action)<0)throw new Error('Invalid action');
  var service=new Service(store,new Provider(store.get('account',null)),engine,progress);
+ if(job.action==='select')return service.select(job.id);
  if(job.action==='resume'){
   if(session.get('intent',{}).manualOff)return '';
   if(engine.readConfig()){try{var r=await engine.start();if(r.running&&!r.message)return '';}catch(_){}}
@@ -40,9 +41,10 @@ async function main(){
  var action=process.argv[2]||'status';
  if(action==='worker'&&/^[a-f0-9]{32}$/.test(process.argv[3]||''))return jobs.work(process.argv[3],execute,publicMessage);
  if(action==='measure'||action==='measure-active')measurements.enqueue(action==='measure-active'?'active':'measure',null);
- if(['connect','stop','refresh','choose','resume','toggle-autostart','toggle-autoUpdate','check-update','install','toggle-split','toggle-kinopoisk'].indexOf(action)>=0){
-  var id=Number(process.argv[3]);if(action!=='choose'||(/^\d{1,10}$/.test(process.argv[3]||'')&&Number.isInteger(id)&&id<=2147483647))jobs.enqueue(action,id);
+ var accepted;
+ if(['connect','stop','refresh','choose','select','resume','toggle-autostart','toggle-autoUpdate','check-update','install','toggle-split','toggle-kinopoisk'].indexOf(action)>=0){
+  var id=Number(process.argv[3]);if(['choose','select'].indexOf(action)<0||(/^\d{1,10}$/.test(process.argv[3]||'')&&Number.isInteger(id)&&id<=2147483647))accepted=jobs.enqueue(action,id);
  }
- console.log(JSON.stringify(await status()));
+ var result=await status();if(accepted!==undefined)result.accepted=accepted;console.log(JSON.stringify(result));
 }
 main().catch(function(){console.log(JSON.stringify({error:true,message:'Служба VPN недоступна. Откройте приложение ещё раз.'}));process.exitCode=1;});
